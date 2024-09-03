@@ -151,8 +151,10 @@ func exceed(nodeName, interfaceName string, tx, rx float64) {
 			cmd := exec.Command("/usr/bin/sshpass", "-p", *sshPwd, "/usr/bin/ssh", "-o", "StrictHostKeyChecking=no", *sshHost, "-p", *sshPort, "shutdown -h now")
 			e := cmd.Run()
 			if e != nil {
-				fmt.Printf("关机命令执行失败: %s\n", e.Error())
-				sendWx(fmt.Sprintf("%s：关机命令执行失败: %s\n", *name, e.Error()))
+				if e.Error() != "exit status 255" {
+					fmt.Printf("关机命令执行失败: %s\n", e.Error())
+					sendWx(fmt.Sprintf("%s：关机命令执行失败: %s\n", *name, e.Error()))
+				}
 			}
 		}
 	}
