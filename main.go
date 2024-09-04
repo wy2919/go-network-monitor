@@ -113,6 +113,7 @@ func SendEmail(body string) {
 	err = smtp.SendMail(smtpServer+":"+smtpPort, auth, *smtpEmail, []string{*smtpEmail}, []byte(message))
 	if err != nil {
 		log.Println("邮件发送报错:", err)
+		return
 	}
 	log.Println("通知邮件发送成功!")
 }
@@ -287,8 +288,8 @@ var host = flag.String("host", "", "vnstat的IP和端口 格式：IP:Port")
 var second = flag.Int64("interval", 30, "监听间隔 单位：秒 默认30")
 var start = flag.Int64("pardon", (10 * 60), "开机延迟时间 单位：秒 默认10分钟")
 var model = flag.Int64("model", 1, "模式 1:以上行流量为限制 2:上下行合并后为限制")
-var gb = flag.Float64("gb", 1000000, "限额上传流量大小 单位：GB")
-var interfacesName = flag.String("interface", "", "网卡名称 例：ens4")
+var gb = flag.Float64("gb", 1000000, "限额流量大小 单位：GB")
+var interfacesName = flag.String("interface", "", "网卡名称 例：eth0")
 var name = flag.String("name", "", "自定义名称 通知时使用")
 var wxKey = flag.String("wxKey", "", "企业微信WebHook的key")
 var shutdown = flag.String("shutdown", "no", "超额后是否关机")
