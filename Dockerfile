@@ -16,7 +16,10 @@ WORKDIR /apps
 
 COPY --from=builder /apps/main .
 
-RUN apk update && apk add --no-cache openssh-client sshpass dbus && mkdir /lib64 && ln -s /lib/libc.musl-x86_64.so.1 /lib64/ld-linux-x86-64.so.2 && chmod +x main
+RUN apk update && apk add --no-cache openssh-client sshpass dbus tzdata && mkdir /lib64 && ln -s /lib/libc.musl-x86_64.so.1 /lib64/ld-linux-x86-64.so.2 && chmod +x main
+
+RUN cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo "Asia/Shanghai" > /etc/timezone
 
 ENV INTERVAL=30 \
     PARDON=600 \
