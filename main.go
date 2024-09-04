@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/smtp"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -89,6 +90,30 @@ func sendWx(text string) {
 	defer resp.Body.Close()
 }
 
+func sendEmail(body string) {
+	smtpServer, smtpPort, err := net.SplitHostPort(*smtpHost)
+	if err != nil {
+		log.Println("邮件服务器解析错误:", err)
+		return
+	}
+	subject := "服务器流量耗尽通知"
+
+	// 邮件内容格式
+	message := "From: " + *smtpEmail + "\n" +
+		"To: " + *smtpEmail + "\n" +
+		"Subject: " + subject + "\n\n" +
+		body
+
+	auth := smtp.PlainAuth("", *smtpEmail, *smtpPwd, smtpServer)
+
+	// 连接邮件服务器
+	err = smtp.SendMail(smtpServer+":"+smtpPort, auth, *smtpEmail, []string{*smtpEmail}, []byte(message))
+	if err != nil {
+		log.Println("邮件发送报错:", err)
+	}
+	log.Println("通知邮件发送成功!")
+}
+
 func convertFileSize(size float64) float64 {
 	return size / (1024.0 * 1024.0 * 1024.0)
 }
@@ -110,7 +135,7 @@ func GetUrl(url string) (jsonData JsonData, e error) {
 
 		err = json.Unmarshal(body, &jsonData)
 		if err != nil {
-			fmt.Println("反序列化 JSON 时出错:", err)
+			log.Println("反序列化 JSON 时出错:", err)
 			return jsonData, err
 		}
 
@@ -123,17 +148,22 @@ func GetUrl(url string) (jsonData JsonData, e error) {
 func exceed(nodeName, interfaceName string, tx, rx float64) {
 	// 发送企业微信通知
 	if *wxKey != "" {
-		sendWx(fmt.Sprintf("流量超额：%s：%s：↑ %.2fGB  ↓ %.2fGB", nodeName, interfaceName, tx, rx))
+		sendWx(fmt.Sprintf("【%s】流量超额：%s：↑ %.2fGB  ↓ %.2fGB", nodeName, interfaceName, tx, rx))
 	}
+
+	if *smtpEmail != "" && *smtpHost != "" {
+		sendEmail(fmt.Sprintf("【%s】流量超额：%s：↑ %.2fGB  ↓ %.2fGB", nodeName, interfaceName, tx, rx))
+	}
+
 	// 关机
 	if *shutdown == "yes" {
-		fmt.Println("执行关机...")
+		log.Println("执行关机...")
 
 		if *shutdownType == "host" {
 			cmd := exec.Command("shutdown", "-h", "now")
 			e := cmd.Run()
 			if e != nil {
-				fmt.Printf("关机命令执行失败: %s\n", e.Error())
+				log.Printf("关机命令执行失败: %s\n", e.Error())
 				sendWx(fmt.Sprintf("%s：关机命令执行失败: %s\n", *name, e.Error()))
 			}
 		}
@@ -142,7 +172,7 @@ func exceed(nodeName, interfaceName string, tx, rx float64) {
 			cmd := exec.Command("dbus-send", "--system", "--print-reply", "--dest=org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager.PowerOff", "boolean:true")
 			e := cmd.Run()
 			if e != nil {
-				fmt.Printf("关机命令执行失败: %s\n", e.Error())
+				log.Printf("关机命令执行失败: %s\n", e.Error())
 				sendWx(fmt.Sprintf("%s：关机命令执行失败: %s\n", *name, e.Error()))
 			}
 		}
@@ -152,7 +182,7 @@ func exceed(nodeName, interfaceName string, tx, rx float64) {
 			e := cmd.Run()
 			if e != nil {
 				if e.Error() != "exit status 255" {
-					fmt.Printf("关机命令执行失败: %s\n", e.Error())
+					log.Printf("关机命令执行失败: %s\n", e.Error())
 					sendWx(fmt.Sprintf("%s：关机命令执行失败: %s\n", *name, e.Error()))
 				}
 			}
@@ -164,19 +194,19 @@ func task(url string) {
 
 	startTime, err := GetLastestBootTime()
 	if err != nil {
-		fmt.Printf("获取开机时间报错：%s\n", err.Error())
+		log.Printf("获取开机时间报错：%s\n", err.Error())
 		sendWx(fmt.Sprintf("%s：获取开机时间报错：%s", *name, err.Error()))
 		return
 	}
 
 	if startTime < *start {
-		fmt.Println("处于开机延迟时间 不监测")
+		log.Println("处于开机延迟时间 不监测")
 		return
 	}
 
 	json, err := GetUrl(url)
 	if err != nil {
-		fmt.Println("Http请求发生错误：", err.Error())
+		log.Println("Http请求发生错误：", err.Error())
 		return
 	}
 
@@ -193,7 +223,7 @@ func task(url string) {
 						// 上传流量达到限制
 						exceed(*name, k.Name, tx, rx)
 					}
-					fmt.Printf("%s：%s：↑ %.2fGB  ↓ %.2fGB\n", *name, k.Name, tx, rx)
+					log.Printf("%s：%s：↑ %.2fGB  ↓ %.2fGB\n", *name, k.Name, tx, rx)
 				}
 			}
 		}
@@ -205,23 +235,23 @@ func verify() bool {
 
 	_, err := net.ResolveTCPAddr("tcp", *host)
 	if err != nil {
-		fmt.Println("Host参数输入错误")
+		log.Fatal("Host参数输入错误")
 		return false
 	}
 
 	if *gb == 0 {
-		fmt.Println("GB参数不能为0")
+		log.Fatal("GB参数不能为0")
 		return false
 	}
 
 	if *interfacesName == "" {
-		fmt.Println("INTERFACE参数不能为空！")
+		log.Fatal("INTERFACE参数不能为空！")
 		return false
 	}
 
 	if *shutdownType == "ssh" {
 		if *sshHost == "" {
-			fmt.Println("SSHHOST参数不能为空！")
+			log.Fatal("SSHHOST参数不能为空！")
 			return false
 		}
 	}
@@ -241,6 +271,9 @@ var shutdownType = flag.String("shutdownType", "host", "关机方式 二进制�
 var sshHost = flag.String("sshHost", "", "ssh用户名和host 格式为：xxx@xx.xx.xx.xx")
 var sshPwd = flag.String("sshPwd", "", "ssh密码")
 var sshPort = flag.String("sshPort", "22", "ssh端口")
+var smtpHost = flag.String("smtpHost", "smtp.qq.com:587", "smtp服务器 默认为qq smtp.qq.com:587")
+var smtpEmail = flag.String("smtpEmail", "", "smtp发送邮箱和接收邮箱 发送给自己")
+var smtpPwd = flag.String("smtpPwd", "", "smtp密码")
 
 func main() {
 
