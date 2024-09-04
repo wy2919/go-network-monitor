@@ -88,6 +88,7 @@ func SendWx(text string) {
 	if err != nil {
 		log.Fatalf("发送到企业微信错误: %v", err)
 	}
+	log.Println("企业微信发送成功!")
 	defer resp.Body.Close()
 }
 
@@ -226,11 +227,19 @@ func task(url string) {
 					tx := convertFileSize(float64(m.Tx)) // 上传
 					rx := convertFileSize(float64(m.Rx)) // 下载
 
-					if *gb < tx {
-						// 上传流量达到限制
-						exceed(*name, k.Name, tx, rx)
-					}
 					log.Printf("%s：%s：↑ %.2fGB  ↓ %.2fGB\n", *name, k.Name, tx, rx)
+
+					if *model == 1 {
+						if *gb < tx {
+							// 上传流量达到限制
+							exceed(*name, k.Name, tx, rx)
+						}
+					} else if *model == 2 {
+						if *gb < (tx + rx) {
+							// 上传+下载流量达到限制
+							exceed(*name, k.Name, tx, rx)
+						}
+					}
 				}
 			}
 		}
@@ -249,6 +258,12 @@ func verify() bool {
 
 	if *gb == 0 {
 		errMsg := fmt.Sprintf("【%s】GB参数不能为0", *name)
+		PrintLog(errMsg)
+		return false
+	}
+
+	if *model != 1 && *model != 2 {
+		errMsg := fmt.Sprintf("【%s】不存在的模式", *name)
 		PrintLog(errMsg)
 		return false
 	}
@@ -272,6 +287,7 @@ func verify() bool {
 var host = flag.String("host", "", "vnstat的IP和端口 格式：IP:Port")
 var second = flag.Int64("interval", 30, "监听间隔 单位：秒 默认30")
 var start = flag.Int64("pardon", (10 * 60), "开机延迟时间 单位：秒 默认10分钟")
+var model = flag.Int64("model", 1, "模式 1:以上行流量为限制 2:上下行合并后为限制")
 var gb = flag.Float64("gb", 1000000, "限额上传流量大小 单位：GB")
 var interfacesName = flag.String("interface", "", "网卡名称 例：ens4")
 var name = flag.String("name", "", "自定义名称 通知时使用")
@@ -280,7 +296,7 @@ var shutdown = flag.String("shutdown", "no", "超额后是否关机")
 var shutdownType = flag.String("shutdownType", "host", "关机方式 二进制使用host 容器使用ssh和dbus")
 var sshHost = flag.String("sshHost", "", "ssh用户名和host 格式为：xxx@xx.xx.xx.xx")
 var sshPwd = flag.String("sshPwd", "", "ssh密码")
-var sshPort = flag.String("sshPort", "22", "ssh端口")
+var sshPort = flag.String("sshPort", "22", "ssh端口 默认22")
 var smtpHost = flag.String("smtpHost", "smtp.qq.com:587", "smtp服务器 默认为qq smtp.qq.com:587")
 var smtpEmail = flag.String("smtpEmail", "", "smtp发送邮箱和接收邮箱 发送给自己")
 var smtpPwd = flag.String("smtpPwd", "", "smtp密码")
