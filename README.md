@@ -6,7 +6,7 @@
 
 挂载dbus关机方式 + 企业微信通知 + 邮件通知
 ```
-docker run -d --name network-monitor --net=host \
+docker run -d --name network-monitor --net=host --restart=always \
     -v /proc/uptime:/proc/uptime \
     -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket \
     -e NAME=gcp \
@@ -21,7 +21,7 @@ docker run -d --name network-monitor --net=host \
 ```
 ssh关机方式 + 企业微信通知
 ```
-docker run -d --name network-monitor --net=host \
+docker run -d --name network-monitor --net=host --restart=always \
     -v /proc/uptime:/proc/uptime \
     -e NAME=gcp \
     -e HOST=127.0.0.1:28685 \
