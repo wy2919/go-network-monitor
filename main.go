@@ -118,10 +118,10 @@ func SendEmail(body string) {
 
 func PrintLog(msg string) {
 	log.Println(msg)
-	if *wxKey == "" {
+	if *wxKey != "" {
 		SendWx(msg)
 	}
-	if *smtpEmail == "" || *smtpHost == "" {
+	if *smtpEmail != "" && *smtpHost != "" {
 		SendEmail(msg)
 	}
 }
