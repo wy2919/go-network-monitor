@@ -19,7 +19,7 @@ import (
 )
 
 func GetLastestBootTime() (int64, error) {
-	// 获取开机时间 返回已经开机了多少秒
+	// 获取开机时间
 	uptimeFilePath := "/proc/uptime"
 	now := time.Now().Unix()
 
@@ -127,7 +127,7 @@ func PrintLog(msg string) {
 	}
 }
 
-func convertFileSize(size float64) float64 {
+func ConvertFileSize(size float64) float64 {
 	return size / (1024.0 * 1024.0 * 1024.0)
 }
 
@@ -158,12 +158,11 @@ func GetUrl(url string) (jsonData JsonData, e error) {
 	}
 }
 
-func exceed(nodeName, interfaceName string, tx, rx float64) {
-	// 发送通知
+func Exceed(nodeName, interfaceName string, tx, rx float64) {
 	msg := fmt.Sprintf("【%s】流量超额：%s：↑ %.2fGB  ↓ %.2fGB", nodeName, interfaceName, tx, rx)
 	PrintLog(msg)
 	errMsg := ""
-	// 关机
+
 	if *shutdown == "yes" {
 		log.Println("执行关机...")
 
@@ -198,7 +197,7 @@ func exceed(nodeName, interfaceName string, tx, rx float64) {
 	}
 }
 
-func task(url string) {
+func Task(url string) {
 
 	startTime, err := GetLastestBootTime()
 	if err != nil {
@@ -224,20 +223,20 @@ func task(url string) {
 		if *interfacesName == k.Name {
 			for _, m := range k.Traffic.Month {
 				if t.Year() == m.Date.Year && int(t.Month()) == m.Date.Month {
-					tx := convertFileSize(float64(m.Tx)) // 上传
-					rx := convertFileSize(float64(m.Rx)) // 下载
+					tx := ConvertFileSize(float64(m.Tx)) // 上传
+					rx := ConvertFileSize(float64(m.Rx)) // 下载
 
 					log.Printf("%s：%s：↑ %.2fGB  ↓ %.2fGB\n", *name, k.Name, tx, rx)
 
 					if *model == 1 {
 						if *gb < tx {
 							// 上传流量达到限制
-							exceed(*name, k.Name, tx, rx)
+							Exceed(*name, k.Name, tx, rx)
 						}
 					} else if *model == 2 {
 						if *gb < (tx + rx) {
 							// 上传+下载流量达到限制
-							exceed(*name, k.Name, tx, rx)
+							Exceed(*name, k.Name, tx, rx)
 						}
 					}
 				}
@@ -246,7 +245,7 @@ func task(url string) {
 	}
 }
 
-func verify() bool {
+func Verify() bool {
 	flag.Parse()
 
 	_, err := net.ResolveTCPAddr("tcp", *host)
@@ -303,30 +302,28 @@ var smtpPwd = flag.String("smtpPwd", "", "smtp密码")
 
 func main() {
 
-	if !verify() {
+	if !Verify() {
 		return
 	}
 
 	url := "http://" + *host
 
-	// 创建一个定时向ticker内部C通道发送消息的任务
 	ticker := time.NewTicker(time.Duration(*second) * time.Second)
 
 	go func() {
 		for {
 			select {
-			case <-ticker.C: // 读取通道数据 这里会定时执行
-				go task(url)
+			case <-ticker.C:
+				go Task(url)
 			}
 		}
 	}()
 
-	// 监听退出操作，执行退出逻辑
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt) // 监听到退出逻辑后会向通道c发送一个os.Signal
+	signal.Notify(c, os.Interrupt)
 	for {
 		select {
-		case <-c: // 通道有数据就代表退出
+		case <-c:
 			return
 		}
 	}
