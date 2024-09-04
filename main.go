@@ -79,7 +79,8 @@ type JsonData struct {
 	} `json:"interfaces"`
 }
 
-func sendWx(text string) {
+func SendWx(text string) {
+
 	param := strings.NewReader(`{"msgtype":"text","text":{"content":"` + text + `"}}`)
 	req, _ := http.NewRequest("POST", "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key="+*wxKey, param)
 	req.Header.Set("Content-Type", "application/json")
@@ -90,7 +91,8 @@ func sendWx(text string) {
 	defer resp.Body.Close()
 }
 
-func sendEmail(body string) {
+func SendEmail(body string) {
+
 	smtpServer, smtpPort, err := net.SplitHostPort(*smtpHost)
 	if err != nil {
 		log.Println("邮件服务器解析错误:", err)
@@ -112,6 +114,16 @@ func sendEmail(body string) {
 		log.Println("邮件发送报错:", err)
 	}
 	log.Println("通知邮件发送成功!")
+}
+
+func PrintLog(msg string) {
+	log.Println(msg)
+	if *wxKey == "" {
+		SendWx(msg)
+	}
+	if *smtpEmail == "" || *smtpHost == "" {
+		SendEmail(msg)
+	}
 }
 
 func convertFileSize(size float64) float64 {
@@ -146,15 +158,10 @@ func GetUrl(url string) (jsonData JsonData, e error) {
 }
 
 func exceed(nodeName, interfaceName string, tx, rx float64) {
-	// 发送企业微信通知
-	if *wxKey != "" {
-		sendWx(fmt.Sprintf("【%s】流量超额：%s：↑ %.2fGB  ↓ %.2fGB", nodeName, interfaceName, tx, rx))
-	}
-
-	if *smtpEmail != "" && *smtpHost != "" {
-		sendEmail(fmt.Sprintf("【%s】流量超额：%s：↑ %.2fGB  ↓ %.2fGB", nodeName, interfaceName, tx, rx))
-	}
-
+	// 发送通知
+	msg := fmt.Sprintf("【%s】流量超额：%s：↑ %.2fGB  ↓ %.2fGB", nodeName, interfaceName, tx, rx)
+	PrintLog(msg)
+	errMsg := ""
 	// 关机
 	if *shutdown == "yes" {
 		log.Println("执行关机...")
@@ -163,8 +170,8 @@ func exceed(nodeName, interfaceName string, tx, rx float64) {
 			cmd := exec.Command("shutdown", "-h", "now")
 			e := cmd.Run()
 			if e != nil {
-				log.Printf("关机命令执行失败: %s\n", e.Error())
-				sendWx(fmt.Sprintf("%s：关机命令执行失败: %s\n", *name, e.Error()))
+				errMsg = fmt.Sprintf("【%s】shutdown关机命令执行失败：%s", *name, e.Error())
+				PrintLog(errMsg)
 			}
 		}
 
@@ -172,8 +179,8 @@ func exceed(nodeName, interfaceName string, tx, rx float64) {
 			cmd := exec.Command("dbus-send", "--system", "--print-reply", "--dest=org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager.PowerOff", "boolean:true")
 			e := cmd.Run()
 			if e != nil {
-				log.Printf("关机命令执行失败: %s\n", e.Error())
-				sendWx(fmt.Sprintf("%s：关机命令执行失败: %s\n", *name, e.Error()))
+				errMsg = fmt.Sprintf("【%s】dbus关机命令执行失败：%s", *name, e.Error())
+				PrintLog(errMsg)
 			}
 		}
 
@@ -182,8 +189,8 @@ func exceed(nodeName, interfaceName string, tx, rx float64) {
 			e := cmd.Run()
 			if e != nil {
 				if e.Error() != "exit status 255" {
-					log.Printf("关机命令执行失败: %s\n", e.Error())
-					sendWx(fmt.Sprintf("%s：关机命令执行失败: %s\n", *name, e.Error()))
+					errMsg = fmt.Sprintf("【%s】ssh关机命令执行失败：%s", *name, e.Error())
+					PrintLog(errMsg)
 				}
 			}
 		}
@@ -194,8 +201,8 @@ func task(url string) {
 
 	startTime, err := GetLastestBootTime()
 	if err != nil {
-		log.Printf("获取开机时间报错：%s\n", err.Error())
-		sendWx(fmt.Sprintf("%s：获取开机时间报错：%s", *name, err.Error()))
+		errMsg := fmt.Sprintf("【%s】获取开机时间报错：%s", *name, err.Error())
+		PrintLog(errMsg)
 		return
 	}
 
@@ -235,27 +242,30 @@ func verify() bool {
 
 	_, err := net.ResolveTCPAddr("tcp", *host)
 	if err != nil {
-		log.Fatal("Host参数输入错误")
+		errMsg := fmt.Sprintf("【%s】vnstat的Host参数解析错误", *name)
+		PrintLog(errMsg)
 		return false
 	}
 
 	if *gb == 0 {
-		log.Fatal("GB参数不能为0")
+		errMsg := fmt.Sprintf("【%s】GB参数不能为0", *name)
+		PrintLog(errMsg)
 		return false
 	}
 
 	if *interfacesName == "" {
-		log.Fatal("INTERFACE参数不能为空！")
+		errMsg := fmt.Sprintf("【%s】INTERFACE参数不能为空！", *name)
+		PrintLog(errMsg)
 		return false
 	}
 
 	if *shutdownType == "ssh" {
 		if *sshHost == "" {
-			log.Fatal("SSHHOST参数不能为空！")
+			errMsg := fmt.Sprintf("【%s】SSHHOST参数不能为空！", *name)
+			PrintLog(errMsg)
 			return false
 		}
 	}
-
 	return true
 }
 
