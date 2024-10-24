@@ -38,13 +38,14 @@ ENV INTERVAL=30 \
     HOST="" \
     MODEL=1 \
     GB=1000000 \
-    INTERFACE="eth0" \
+    INTERFACE="ens4" \
     WXKEY="" \
     SHUTDOWN="no" \
     SHUTDOWNTYPE="dbus" \
     SSHHOST="" \
     SSHPWD="" \
     SSHPORT=22 \
+    SSHRUN="shutdown -h now" \
     SMTPHOST="smtp.qq.com:587" \
     SMTPEMAIL="" \
     SMTPPWD=""
@@ -63,6 +64,7 @@ CMD ./main \
   -sshHost $SSHHOST \
   -sshPwd $SSHPWD \
   -sshPort $SSHPORT \
+  -sshRun $SSHRUN \
   -smtpHost $SMTPHOST \
   -smtpEmail $SMTPEMAIL \
   -smtpPwd $SMTPPWD
