@@ -52,6 +52,7 @@ docker run -d --name network-monitor --net=host --restart=always \
 |SSHHOST|【ssh关机】ssh用户名和host 格式为：xxx@xx.xx.xx.xx|
 |SSHPWD|【ssh关机】ssh密码|
 |SSHPORT|【ssh关机】ssh端口 默认22|
+|SSHRUN|【ssh关机命令】默认shutdown -h now|
 |WXKEY|【微信通知】企业微信WebHook的key|
 |SMTPHOST|【邮件通知】smtp服务器 默认为qq smtp.qq.com:587|
 |SMTPEMAIL|【邮件通知】smtp发送邮箱和接收邮箱 发送给自己|
