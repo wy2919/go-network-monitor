@@ -34,6 +34,7 @@ ENV INTERVAL=30 \
     SSHHOST="" \
     SSHPWD="" \
     SSHPORT=22 \
+    SSHRUN="shutdown -h now" \
     SMTPHOST="smtp.qq.com:587" \
     SMTPEMAIL="" \
     SMTPPWD=""
@@ -52,6 +53,7 @@ CMD ./main \
   -sshHost $SSHHOST \
   -sshPwd $SSHPWD \
   -sshPort $SSHPORT \
+  -sshRun $SSHRUN \
   -smtpHost $SMTPHOST \
   -smtpEmail $SMTPEMAIL \
   -smtpPwd $SMTPPWD
