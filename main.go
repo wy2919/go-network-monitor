@@ -168,7 +168,8 @@ func Exceed(nodeName, interfaceName string, tx, rx float64) {
 		log.Println("执行关机...")
 
 		if *shutdownType == "host" {
-			cmd := exec.Command("shutdown", "-h", "now")
+			cmd := exec.Command(*sshRun)
+			//cmd := exec.Command("shutdown", "-h", "now")
 			e := cmd.Run()
 			if e != nil {
 				errMsg = fmt.Sprintf("【%s】shutdown关机命令执行失败：%s", *name, e.Error())
@@ -186,7 +187,8 @@ func Exceed(nodeName, interfaceName string, tx, rx float64) {
 		}
 
 		if *shutdownType == "ssh" {
-			cmd := exec.Command("/usr/bin/sshpass", "-p", *sshPwd, "/usr/bin/ssh", "-o", "StrictHostKeyChecking=no", *sshHost, "-p", *sshPort, "shutdown -h now")
+			cmd := exec.Command("/usr/bin/sshpass", "-p", *sshPwd, "/usr/bin/ssh", "-o", "StrictHostKeyChecking=no", *sshHost, "-p", *sshPort, *sshRun)
+			//cmd := exec.Command("/usr/bin/sshpass", "-p", *sshPwd, "/usr/bin/ssh", "-o", "StrictHostKeyChecking=no", *sshHost, "-p", *sshPort, "shutdown -h now")
 			e := cmd.Run()
 			if e != nil {
 				if e.Error() != "exit status 255" {
@@ -297,6 +299,7 @@ var shutdownType = flag.String("shutdownType", "host", "关机方式 二进制�
 var sshHost = flag.String("sshHost", "", "ssh用户名和host 格式为：xxx@xx.xx.xx.xx")
 var sshPwd = flag.String("sshPwd", "", "ssh密码")
 var sshPort = flag.String("sshPort", "22", "ssh端口 默认22")
+var sshRun = flag.String("sshRun", "shutdown -h now", "关机命令 默认shutdown -h now")
 var smtpHost = flag.String("smtpHost", "smtp.qq.com:587", "smtp服务器 默认为qq smtp.qq.com:587")
 var smtpEmail = flag.String("smtpEmail", "", "smtp发送邮箱和接收邮箱 发送给自己")
 var smtpPwd = flag.String("smtpPwd", "", "smtp密码")
