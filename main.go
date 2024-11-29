@@ -310,6 +310,8 @@ func main() {
 		return
 	}
 
+	fmt.Println("当前ssh关机命令为：" + *sshRun)
+
 	url := "http://" + *host
 
 	ticker := time.NewTicker(time.Duration(*second) * time.Second)
