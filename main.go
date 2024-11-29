@@ -86,7 +86,7 @@ func SendWx(text string) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Fatalf("发送到企业微信错误: %v", err)
+		log.Printf("发送到企业微信错误: %v", err)
 	}
 	log.Println("企业微信发送成功!")
 	defer resp.Body.Close()
